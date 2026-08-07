@@ -208,20 +208,38 @@ class RiscvAssembler {
 
     private enum class Segment { TEXT, DATA }
 
-    private fun unescapeString(s: String): String {
-        return s.replace("\\n", "\n")
-            .replace("\\t", "\t")
-            .replace("\\r", "\r")
-            .replace("\\\"", "\"")
-            .replace("\\\\", "\\")
-            .replace("\\0", "\u0000")
+    private fun resolveSymbolOrNumber(target: String, symbols: Map<String, Symbol>): Int {
+        val s = target.trim()
+        val sym = symbols[s]
+        if (sym != null) {
+            return sym.address
+        }
+        val num = parseImmediateValue(s)
+        if (num != null) {
+            return num
+        }
+        throw IllegalArgumentException("Symbol '$s' not found in symbol table.")
     }
 
-    private fun parseNumberOrSymbolPlaceholder(str: String): Int {
+    private fun parseImmediateValue(str: String): Int? {
         val s = str.trim()
-        if (s.startsWith("0x") || s.startsWith("0X")) return s.substring(2).toLong(16).toInt()
-        if (s.startsWith("0b") || s.startsWith("0B")) return s.substring(2).toInt(2)
-        return s.toIntOrNull() ?: 0
+        if (s.isEmpty()) return null
+        if (s.startsWith("0x") || s.startsWith("0X")) {
+            return try { s.substring(2).toLong(16).toInt() } catch (e: Exception) { null }
+        }
+        if (s.startsWith("0b") || s.startsWith("0B")) {
+            return try { s.substring(2).toInt(2) } catch (e: Exception) { null }
+        }
+        return s.toIntOrNull()
+    }
+
+    private fun parseNumberOrSymbolPlaceholder(str: String, symbols: Map<String, Symbol>): Int {
+        val s = str.trim()
+        val sym = symbols[s]
+        if (sym != null) return sym.address
+        val num = parseImmediateValue(s)
+        if (num != null) return num
+        return 0
     }
 
     private fun tokenizeInstruction(line: String): List<String> {
@@ -283,14 +301,12 @@ class RiscvAssembler {
             "fabs.s" -> if (tokens.size >= 3) listOf("fmul.s ${tokens[1]}, ${tokens[2]}, ${tokens[2]}") else listOf(line)
             "la" -> {
                 if (tokens.size >= 3) {
-                    // la rd, label -> auipc rd, %hi(label) + addi rd, rd, %lo(label)
-                    // For single 32-bit execution, we pass la directly to encode as pseudo or dual
                     listOf(line)
                 } else listOf(line)
             }
             "li" -> {
                 if (tokens.size >= 3) {
-                    val immVal = tokens[2].toIntOrNull()
+                    val immVal = parseImmediateValue(tokens[2])
                     if (immVal != null && (immVal < -2048 || immVal > 2047)) {
                         val upper = (immVal + 0x800) ushr 12
                         val lower = immVal - (upper shl 12)
@@ -342,14 +358,13 @@ class RiscvAssembler {
             ?: throw IllegalArgumentException("Unknown float register name: '$str'")
     }
 
-    private fun parseMemoryOffsetRegister(str: String): Pair<Int, Int> {
-        // Form: "offset(reg)" e.g. "4(sp)" or "0(t0)" or "label"
+    private fun parseMemoryOffsetRegister(str: String, symbols: Map<String, Symbol>): Pair<Int, Int> {
         val idxOpen = str.indexOf('(')
         val idxClose = str.indexOf(')')
         if (idxOpen >= 0 && idxClose > idxOpen) {
             val offsetStr = str.substring(0, idxOpen).trim()
             val regStr = str.substring(idxOpen + 1, idxClose).trim()
-            val offset = offsetStr.toIntOrNull() ?: 0
+            val offset = if (offsetStr.isNotEmpty()) resolveSymbolOrNumber(offsetStr, symbols) else 0
             val reg = parseRegister(regStr)
             return Pair(offset, reg)
         }
@@ -400,7 +415,7 @@ class RiscvAssembler {
             "addi", "slti", "sltiu", "xori", "ori", "andi", "slli", "srli", "srai" -> {
                 val rd = parseRegister(tokens[1])
                 val rs1 = parseRegister(tokens[2])
-                val imm = tokens[3].toIntOrNull() ?: 0
+                val imm = resolveSymbolOrNumber(tokens[3], symbols)
                 val funct3 = when (opcode) {
                     "addi" -> 0
                     "slli" -> 1
@@ -420,7 +435,7 @@ class RiscvAssembler {
             // Loads: lb, lh, lw, lbu, lhu
             "lb", "lh", "lw", "lbu", "lhu" -> {
                 val rd = parseRegister(tokens[1])
-                val (offset, rs1) = parseMemoryOffsetRegister(tokens[2])
+                val (offset, rs1) = parseMemoryOffsetRegister(tokens[2], symbols)
                 val funct3 = when (opcode) {
                     "lb" -> 0
                     "lh" -> 1
@@ -436,7 +451,7 @@ class RiscvAssembler {
             // Stores: sb, sh, sw
             "sb", "sh", "sw" -> {
                 val rs2 = parseRegister(tokens[1])
-                val (offset, rs1) = parseMemoryOffsetRegister(tokens[2])
+                val (offset, rs1) = parseMemoryOffsetRegister(tokens[2], symbols)
                 val funct3 = when (opcode) {
                     "sb" -> 0
                     "sh" -> 1
@@ -454,7 +469,7 @@ class RiscvAssembler {
                 val rs1 = parseRegister(tokens[1])
                 val rs2 = parseRegister(tokens[2])
                 val target = tokens[3]
-                val targetAddr = symbols[target]?.address ?: target.toIntOrNull() ?: address
+                val targetAddr = resolveSymbolOrNumber(target, symbols)
                 val offset = targetAddr - address
 
                 val funct3 = when (opcode) {
@@ -478,7 +493,7 @@ class RiscvAssembler {
             "jal" -> {
                 val rd = if (tokens.size >= 3) parseRegister(tokens[1]) else 1 // ra
                 val target = if (tokens.size >= 3) tokens[2] else tokens[1]
-                val targetAddr = symbols[target]?.address ?: target.toIntOrNull() ?: address
+                val targetAddr = resolveSymbolOrNumber(target, symbols)
                 val offset = targetAddr - address
 
                 val imm20 = (offset shr 20) and 0x1
@@ -496,9 +511,9 @@ class RiscvAssembler {
                 val offset: Int
                 if (tokens.size >= 4) {
                     rs1 = parseRegister(tokens[2])
-                    offset = tokens[3].toIntOrNull() ?: 0
+                    offset = resolveSymbolOrNumber(tokens[3], symbols)
                 } else {
-                    val (off, r) = parseMemoryOffsetRegister(tokens[2])
+                    val (off, r) = parseMemoryOffsetRegister(tokens[2], symbols)
                     rs1 = r
                     offset = off
                 }
@@ -509,7 +524,7 @@ class RiscvAssembler {
             // LUI
             "lui" -> {
                 val rd = parseRegister(tokens[1])
-                val imm = tokens[2].toIntOrNull() ?: 0
+                val imm = resolveSymbolOrNumber(tokens[2], symbols)
                 val code = ((imm and 0xFFFFF) shl 12) or (rd shl 7) or 0x37
                 Instruction(address, lineNumber, originalLine, formattedText, code, InstructionFormat.U_TYPE, opcode, rd = rd, imm = imm)
             }
@@ -517,7 +532,7 @@ class RiscvAssembler {
             // AUIPC
             "auipc" -> {
                 val rd = parseRegister(tokens[1])
-                val imm = tokens[2].toIntOrNull() ?: 0
+                val imm = resolveSymbolOrNumber(tokens[2], symbols)
                 val code = ((imm and 0xFFFFF) shl 12) or (rd shl 7) or 0x17
                 Instruction(address, lineNumber, originalLine, formattedText, code, InstructionFormat.U_TYPE, opcode, rd = rd, imm = imm)
             }
@@ -525,7 +540,7 @@ class RiscvAssembler {
             // LI (Pseudo)
             "li" -> {
                 val rd = parseRegister(tokens[1])
-                val imm = tokens[2].toIntOrNull() ?: 0
+                val imm = resolveSymbolOrNumber(tokens[2], symbols)
                 val code = ((imm and 0xFFF) shl 20) or (0 shl 15) or (0 shl 12) or (rd shl 7) or 0x13
                 Instruction(address, lineNumber, originalLine, formattedText, code, InstructionFormat.PSEUDO, opcode, rd = rd, imm = imm)
             }
@@ -534,7 +549,7 @@ class RiscvAssembler {
             "la" -> {
                 val rd = parseRegister(tokens[1])
                 val target = tokens[2]
-                val targetAddr = symbols[target]?.address ?: target.toIntOrNull() ?: Memory.DATA_BASE
+                val targetAddr = resolveSymbolOrNumber(target, symbols)
                 val code = ((targetAddr and 0xFFF) shl 20) or (0 shl 15) or (0 shl 12) or (rd shl 7) or 0x13
                 Instruction(address, lineNumber, originalLine, formattedText, code, InstructionFormat.PSEUDO, opcode, rd = rd, imm = targetAddr, labelTarget = target)
             }
@@ -542,13 +557,13 @@ class RiscvAssembler {
             // Floating point: flw, fsw, fadd.s, fsub.s, fmul.s, fdiv.s, fmv.s
             "flw" -> {
                 val rd = parseFloatRegister(tokens[1])
-                val (offset, rs1) = parseMemoryOffsetRegister(tokens[2])
+                val (offset, rs1) = parseMemoryOffsetRegister(tokens[2], symbols)
                 val code = ((offset and 0xFFF) shl 20) or (rs1 shl 15) or (2 shl 12) or (rd shl 7) or 0x07
                 Instruction(address, lineNumber, originalLine, formattedText, code, InstructionFormat.I_TYPE, opcode, rd = rd, rs1 = rs1, imm = offset)
             }
             "fsw" -> {
                 val rs2 = parseFloatRegister(tokens[1])
-                val (offset, rs1) = parseMemoryOffsetRegister(tokens[2])
+                val (offset, rs1) = parseMemoryOffsetRegister(tokens[2], symbols)
                 val imm11_5 = (offset and 0xFE0) shr 5
                 val imm4_0 = offset and 0x01F
                 val code = (imm11_5 shl 25) or (rs2 shl 20) or (rs1 shl 15) or (2 shl 12) or (imm4_0 shl 7) or 0x27

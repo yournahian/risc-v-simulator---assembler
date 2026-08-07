@@ -74,4 +74,38 @@ class RiscvAssemblerTest {
         simulator.stepBack() // Undo li
         assertEquals(0, simulator.registers[5].value)
     }
+
+    @Test
+    fun testUndefinedSymbolReturnsError() {
+        val code = """
+            .data
+            num1: .word 10, 20, 30, 40
+            num2: .word 4
+            .text
+            .globl start
+            start:
+                la a1, num1
+                lw a2, num2
+            my_loop:
+                lw a0, 0(a1)
+                li a7, 1
+                ecall
+                li a0, 10
+                li a7, 11
+                ecall
+                addi a1, a1, 4
+                addi a2, a2, -1
+                bnez a2, my_loopl
+                li a7, 93
+                li a0, 0
+                ecall
+        """.trimIndent()
+
+        val assembler = RiscvAssembler()
+        val result = assembler.assemble(code)
+
+        assertFalse(result.isSuccess)
+        assertTrue(result.errors.isNotEmpty())
+        assertTrue(result.errors.any { it.message.contains("Symbol 'my_loopl' not found") })
+    }
 }
