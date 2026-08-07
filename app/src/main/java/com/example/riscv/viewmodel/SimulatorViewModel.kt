@@ -98,7 +98,8 @@ class SimulatorViewModel : ViewModel() {
             state.copy(
                 editorFiles = updatedFiles,
                 sourceCode = newCode,
-                isAssembled = false
+                isAssembled = false,
+                assemblyResult = null
             )
         }
     }
@@ -111,7 +112,8 @@ class SimulatorViewModel : ViewModel() {
                 activeFileId = id,
                 sourceCode = targetFile.content,
                 breakpoints = emptySet(),
-                isAssembled = false
+                isAssembled = false,
+                assemblyResult = null
             )
         }
     }

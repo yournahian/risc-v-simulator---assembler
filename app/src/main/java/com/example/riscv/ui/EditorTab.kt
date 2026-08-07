@@ -57,8 +57,16 @@ fun EditorTab(
     val lines = remember(uiState.sourceCode) { uiState.sourceCode.lines() }
     val highlightedText = remember(uiState.sourceCode) { SyntaxHighlighter.highlight(uiState.sourceCode) }
 
-    val activeLine = remember(uiState.pc, uiState.assemblyResult) {
-        uiState.assemblyResult?.instructions?.firstOrNull { it.address == uiState.pc }?.lineNumber
+    val activeLine = remember(uiState.pc, uiState.assemblyResult, uiState.isAssembled, uiState.status) {
+        if (uiState.isAssembled && (uiState.status == com.example.riscv.simulator.ProgramStatus.PAUSED ||
+            uiState.status == com.example.riscv.simulator.ProgramStatus.RUNNING ||
+            uiState.status == com.example.riscv.simulator.ProgramStatus.WAITING_INPUT_INT ||
+            uiState.status == com.example.riscv.simulator.ProgramStatus.WAITING_INPUT_FLOAT ||
+            uiState.status == com.example.riscv.simulator.ProgramStatus.WAITING_INPUT_STRING)) {
+            uiState.assemblyResult?.instructions?.firstOrNull { it.address == uiState.pc }?.lineNumber
+        } else {
+            null
+        }
     }
 
     val snippets = listOf(
