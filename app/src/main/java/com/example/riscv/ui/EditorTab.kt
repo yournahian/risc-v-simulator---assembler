@@ -73,6 +73,7 @@ fun EditorTab(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF1C1B1F))
+            .imePadding()
     ) {
         // Toolbar with Action Buttons & Toggleable Shortcuts
         Card(
@@ -221,7 +222,7 @@ fun EditorTab(
                                 text = file.name,
                                 color = if (isActive) Color(0xFFE6E1E5) else Color(0xFF938F99),
                                 fontSize = 12.sp,
-                                fontWeight = if (isActive) FontWeight.SemiBold else FontWeight.Normal
+                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal
                             )
                             if (uiState.editorFiles.size > 1) {
                                 Spacer(modifier = Modifier.width(6.dp))
@@ -275,6 +276,9 @@ fun EditorTab(
             }
         }
 
+        // Synchronized vertical scroll state for code editor and line numbers
+        val editorScrollState = rememberScrollState()
+
         // Code Editor & Line Numbers
         Row(
             modifier = Modifier
@@ -283,18 +287,16 @@ fun EditorTab(
                 .padding(2.dp)
         ) {
             // Line Numbers & Breakpoint Indicators Column
-            val listState = rememberLazyListState()
-            
-            LazyColumn(
-                state = listState,
+            Column(
                 modifier = Modifier
                     .width(44.dp)
                     .fillMaxHeight()
                     .background(Color(0xFF1C1B1F))
-                    .padding(vertical = 8.dp),
+                    .verticalScroll(editorScrollState)
+                    .padding(top = 8.dp, bottom = 120.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                itemsIndexed(lines) { idx, _ ->
+                lines.forEachIndexed { idx, _ ->
                     val lineNum = idx + 1
                     val isBreakpoint = uiState.breakpoints.contains(lineNum)
                     val isActive = activeLine == lineNum
@@ -327,14 +329,21 @@ fun EditorTab(
                 }
             }
 
-            Divider(color = Color(0xFF49454F), modifier = Modifier.fillMaxHeight().width(1.dp))
+            Divider(
+                color = Color(0xFF49454F),
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .width(1.dp)
+            )
 
             // Code Editor Box
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .weight(1f)
                     .background(Color(0xFF121115))
-                    .padding(8.dp)
+                    .verticalScroll(editorScrollState)
+                    .padding(top = 8.dp, bottom = 120.dp, start = 8.dp, end = 8.dp)
             ) {
                 BasicTextField(
                     value = uiState.sourceCode,
@@ -347,7 +356,7 @@ fun EditorTab(
                         fontSize = 13.sp,
                         lineHeight = 22.sp
                     ),
-                    modifier = Modifier.fillMaxSize()
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
