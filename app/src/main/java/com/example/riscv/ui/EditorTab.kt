@@ -74,7 +74,6 @@ fun EditorTab(
         modifier = Modifier
             .fillMaxSize()
             .background(Color(0xFF1C1B1F))
-            .imePadding()
     ) {
         // Toolbar with Action Buttons & Toggleable Shortcuts
         Card(
@@ -294,7 +293,7 @@ fun EditorTab(
                     .fillMaxHeight()
                     .background(Color(0xFF1C1B1F))
                     .verticalScroll(editorScrollState)
-                    .padding(top = 8.dp, bottom = 120.dp),
+                    .padding(top = 8.dp, bottom = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 lines.forEachIndexed { idx, _ ->
@@ -344,7 +343,7 @@ fun EditorTab(
                     .weight(1f)
                     .background(Color(0xFF121115))
                     .verticalScroll(editorScrollState)
-                    .padding(top = 8.dp, bottom = 120.dp, start = 8.dp, end = 8.dp)
+                    .padding(top = 8.dp, bottom = 16.dp, start = 8.dp, end = 8.dp)
             ) {
                 BasicTextField(
                     value = uiState.sourceCode,
