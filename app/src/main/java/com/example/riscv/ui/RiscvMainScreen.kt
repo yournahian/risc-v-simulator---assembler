@@ -55,7 +55,9 @@ fun getFileNameFromUri(context: Context, uri: Uri): String {
     return fileName
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun RiscvMainScreen(
     viewModel: SimulatorViewModel = viewModel()
