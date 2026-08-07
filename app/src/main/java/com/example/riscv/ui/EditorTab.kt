@@ -302,7 +302,7 @@ fun EditorTab(
                     .fillMaxHeight()
                     .background(Color(0xFF1C1B1F))
                     .verticalScroll(editorScrollState)
-                    .padding(top = 8.dp, bottom = 120.dp),
+                    .padding(top = 8.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 lines.forEachIndexed { idx, _ ->
@@ -336,6 +336,7 @@ fun EditorTab(
                         )
                     }
                 }
+                Spacer(modifier = Modifier.height(350.dp))
             }
 
             Divider(
@@ -352,21 +353,27 @@ fun EditorTab(
                     .weight(1f)
                     .background(Color(0xFF121115))
                     .verticalScroll(editorScrollState)
-                    .padding(top = 8.dp, bottom = 120.dp, start = 8.dp, end = 8.dp)
             ) {
-                BasicTextField(
-                    value = uiState.sourceCode,
-                    onValueChange = onCodeChange,
-                    cursorBrush = SolidColor(Color.White),
-                    visualTransformation = remember { RiscvSyntaxVisualTransformation() },
-                    textStyle = TextStyle(
-                        color = Color(0xFFE6E1E5),
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 13.sp,
-                        lineHeight = 22.sp
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp, start = 8.dp, end = 8.dp)
+                ) {
+                    BasicTextField(
+                        value = uiState.sourceCode,
+                        onValueChange = onCodeChange,
+                        cursorBrush = SolidColor(Color.White),
+                        visualTransformation = remember { RiscvSyntaxVisualTransformation() },
+                        textStyle = TextStyle(
+                            color = Color(0xFFE6E1E5),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 13.sp,
+                            lineHeight = 22.sp
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(350.dp))
+                }
             }
         }
     }
