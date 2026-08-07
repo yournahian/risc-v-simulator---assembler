@@ -279,6 +279,15 @@ fun EditorTab(
         // Synchronized vertical scroll state for code editor and line numbers
         val editorScrollState = rememberScrollState()
 
+        // Auto-scroll to keep new lines in view when typing near the bottom
+        var previousLineCount by remember { mutableIntStateOf(lines.size) }
+        LaunchedEffect(lines.size) {
+            if (lines.size > previousLineCount) {
+                editorScrollState.animateScrollTo(editorScrollState.maxValue)
+            }
+            previousLineCount = lines.size
+        }
+
         // Code Editor & Line Numbers
         Row(
             modifier = Modifier
