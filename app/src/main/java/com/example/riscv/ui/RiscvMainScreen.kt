@@ -144,57 +144,64 @@ fun RiscvMainScreen(
             )
         },
         bottomBar = {
-            NavigationBar(
-                containerColor = Color(0xFF1C1B1F),
-                contentColor = Color(0xFFD0BCFF)
+            val isKeyboardOpen = WindowInsets.isImeVisible
+            AnimatedVisibility(
+                visible = !isKeyboardOpen,
+                enter = fadeIn(),
+                exit = fadeOut()
             ) {
-                val navItemColors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = Color(0xFFD0BCFF),
-                    selectedTextColor = Color(0xFFD0BCFF),
-                    indicatorColor = Color(0xFF49454F),
-                    unselectedIconColor = Color(0xFFCAC4D0),
-                    unselectedTextColor = Color(0xFFCAC4D0)
-                )
+                NavigationBar(
+                    containerColor = Color(0xFF1C1B1F),
+                    contentColor = Color(0xFFD0BCFF)
+                ) {
+                    val navItemColors = NavigationBarItemDefaults.colors(
+                        selectedIconColor = Color(0xFFD0BCFF),
+                        selectedTextColor = Color(0xFFD0BCFF),
+                        indicatorColor = Color(0xFF49454F),
+                        unselectedIconColor = Color(0xFFCAC4D0),
+                        unselectedTextColor = Color(0xFFCAC4D0)
+                    )
 
-                NavigationBarItem(
-                    selected = uiState.currentTab == AppTab.EDITOR,
-                    onClick = { viewModel.selectTab(AppTab.EDITOR) },
-                    icon = { Icon(Icons.Default.Code, contentDescription = "Editor") },
-                    label = { Text("Editor", fontSize = 10.sp, fontWeight = FontWeight.Medium) },
-                    colors = navItemColors
-                )
+                    NavigationBarItem(
+                        selected = uiState.currentTab == AppTab.EDITOR,
+                        onClick = { viewModel.selectTab(AppTab.EDITOR) },
+                        icon = { Icon(Icons.Default.Code, contentDescription = "Editor") },
+                        label = { Text("Editor", fontSize = 10.sp, fontWeight = FontWeight.Medium) },
+                        colors = navItemColors
+                    )
 
-                NavigationBarItem(
-                    selected = uiState.currentTab == AppTab.CONSOLE,
-                    onClick = { viewModel.selectTab(AppTab.CONSOLE) },
-                    icon = { Icon(Icons.Default.Terminal, contentDescription = "Console") },
-                    label = { Text("Console", fontSize = 10.sp, fontWeight = FontWeight.Medium) },
-                    colors = navItemColors
-                )
+                    NavigationBarItem(
+                        selected = uiState.currentTab == AppTab.CONSOLE,
+                        onClick = { viewModel.selectTab(AppTab.CONSOLE) },
+                        icon = { Icon(Icons.Default.Terminal, contentDescription = "Console") },
+                        label = { Text("Console", fontSize = 10.sp, fontWeight = FontWeight.Medium) },
+                        colors = navItemColors
+                    )
 
-                NavigationBarItem(
-                    selected = uiState.currentTab == AppTab.EXECUTE,
-                    onClick = { viewModel.selectTab(AppTab.EXECUTE) },
-                    icon = { Icon(Icons.Default.BugReport, contentDescription = "Debug") },
-                    label = { Text("Debug", fontSize = 10.sp, fontWeight = FontWeight.Medium) },
-                    colors = navItemColors
-                )
+                    NavigationBarItem(
+                        selected = uiState.currentTab == AppTab.EXECUTE,
+                        onClick = { viewModel.selectTab(AppTab.EXECUTE) },
+                        icon = { Icon(Icons.Default.BugReport, contentDescription = "Debug") },
+                        label = { Text("Debug", fontSize = 10.sp, fontWeight = FontWeight.Medium) },
+                        colors = navItemColors
+                    )
 
-                NavigationBarItem(
-                    selected = uiState.currentTab == AppTab.REGISTERS,
-                    onClick = { viewModel.selectTab(AppTab.REGISTERS) },
-                    icon = { Icon(Icons.Default.FormatListNumbered, contentDescription = "Registers") },
-                    label = { Text("Registers", fontSize = 10.sp, fontWeight = FontWeight.Medium) },
-                    colors = navItemColors
-                )
+                    NavigationBarItem(
+                        selected = uiState.currentTab == AppTab.REGISTERS,
+                        onClick = { viewModel.selectTab(AppTab.REGISTERS) },
+                        icon = { Icon(Icons.Default.FormatListNumbered, contentDescription = "Registers") },
+                        label = { Text("Registers", fontSize = 10.sp, fontWeight = FontWeight.Medium) },
+                        colors = navItemColors
+                    )
 
-                NavigationBarItem(
-                    selected = uiState.currentTab == AppTab.MEMORY,
-                    onClick = { viewModel.selectTab(AppTab.MEMORY) },
-                    icon = { Icon(Icons.Default.Memory, contentDescription = "Memory") },
-                    label = { Text("Memory", fontSize = 10.sp, fontWeight = FontWeight.Medium) },
-                    colors = navItemColors
-                )
+                    NavigationBarItem(
+                        selected = uiState.currentTab == AppTab.MEMORY,
+                        onClick = { viewModel.selectTab(AppTab.MEMORY) },
+                        icon = { Icon(Icons.Default.Memory, contentDescription = "Memory") },
+                        label = { Text("Memory", fontSize = 10.sp, fontWeight = FontWeight.Medium) },
+                        colors = navItemColors
+                    )
+                }
             }
         },
         containerColor = Color(0xFF1C1B1F)
