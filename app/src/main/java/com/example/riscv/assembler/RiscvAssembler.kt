@@ -85,7 +85,7 @@ class RiscvAssembler {
                             val nums = args.split(",").map { it.trim() }
                             for (nStr in nums) {
                                 if (nStr.isNotEmpty()) {
-                                    val value = parseNumberOrSymbolPlaceholder(nStr)
+                                    val value = parseNumberOrSymbolPlaceholder(nStr, symbols)
                                     initialMemory.writeWord(currentDataAddr, value)
                                     currentDataAddr += 4
                                 }
@@ -97,7 +97,7 @@ class RiscvAssembler {
                             val nums = args.split(",").map { it.trim() }
                             for (nStr in nums) {
                                 if (nStr.isNotEmpty()) {
-                                    val value = parseNumberOrSymbolPlaceholder(nStr).toShort()
+                                    val value = parseNumberOrSymbolPlaceholder(nStr, symbols).toShort()
                                     initialMemory.writeHalfword(currentDataAddr, value)
                                     currentDataAddr += 2
                                 }
@@ -109,7 +109,7 @@ class RiscvAssembler {
                             val nums = args.split(",").map { it.trim() }
                             for (nStr in nums) {
                                 if (nStr.isNotEmpty()) {
-                                    val value = parseNumberOrSymbolPlaceholder(nStr).toByte()
+                                    val value = parseNumberOrSymbolPlaceholder(nStr, symbols).toByte()
                                     initialMemory.writeByte(currentDataAddr, value)
                                     currentDataAddr += 1
                                 }
@@ -204,6 +204,17 @@ class RiscvAssembler {
             errors = errors,
             sourceLineToAddressMap = sourceLineToAddressMap
         )
+    }
+
+    private enum class Segment { TEXT, DATA }
+
+    private fun unescapeString(s: String): String {
+        return s.replace("\\n", "\n")
+            .replace("\\t", "\t")
+            .replace("\\r", "\r")
+            .replace("\\\"", "\"")
+            .replace("\\\\", "\\")
+            .replace("\\0", "\u0000")
     }
 
     private fun findLabelColonIndex(line: String): Int {
