@@ -108,4 +108,72 @@ class RiscvAssemblerTest {
         assertTrue(result.errors.isNotEmpty())
         assertTrue(result.errors.any { it.message.contains("Symbol 'my_loopl' not found") })
     }
+
+    @Test
+    fun testStringColonParsing() {
+        val code = """
+            .data
+            msg: .asciiz "Time: 12:00"
+            .text
+            main:
+                la a0, msg
+                li a7, 4
+                ecall
+        """.trimIndent()
+
+        val assembler = RiscvAssembler()
+        val result = assembler.assemble(code)
+
+        assertTrue(result.isSuccess)
+        assertEquals("Time: 12:00", result.initialMemory.readString(result.symbols["msg"]!!.address))
+    }
+
+    @Test
+    fun testDivOverflowDoesNotCrash() {
+        val code = """
+            .text
+            main:
+                li t0, -2147483648
+                li t1, -1
+                div t2, t0, t1
+                rem t3, t0, t1
+        """.trimIndent()
+
+        val assembler = RiscvAssembler()
+        val result = assembler.assemble(code)
+        assertTrue(result.isSuccess)
+
+        val simulator = RiscvSimulator()
+        simulator.loadProgram(result)
+        simulator.executeNextStep() // li t0
+        simulator.executeNextStep() // li t1
+        simulator.executeNextStep() // div t2, t0, t1
+        assertEquals(Int.MIN_VALUE, simulator.registers[7].value) // t2 is x7
+        simulator.executeNextStep() // rem t3, t0, t1
+        assertEquals(0, simulator.registers[28].value) // t3 is x28
+    }
+
+    @Test
+    fun testNumericRegisterParsing() {
+        val code = """
+            .text
+            main:
+                addi 5, 0, 10
+                addi 6, 5, 20
+                add 7, 5, 6
+        """.trimIndent()
+
+        val assembler = RiscvAssembler()
+        val result = assembler.assemble(code)
+        assertTrue(result.isSuccess)
+
+        val simulator = RiscvSimulator()
+        simulator.loadProgram(result)
+        simulator.executeNextStep()
+        assertEquals(10, simulator.registers[5].value)
+        simulator.executeNextStep()
+        assertEquals(20, simulator.registers[6].value)
+        simulator.executeNextStep()
+        assertEquals(30, simulator.registers[7].value)
+    }
 }

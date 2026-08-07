@@ -245,16 +245,28 @@ class RiscvSimulator {
             "mulh" -> setReg(rd, ((getReg(rs1).toLong() * getReg(rs2).toLong()) shr 32).toInt())
             "mulhu" -> setReg(rd, (((getReg(rs1).toLong() and 0xFFFFFFFFL) * (getReg(rs2).toLong() and 0xFFFFFFFFL)) ushr 32).toInt())
             "div" -> {
+                val n = getReg(rs1)
                 val d = getReg(rs2)
-                setReg(rd, if (d != 0) getReg(rs1) / d else -1)
+                val res = when {
+                    d == 0 -> -1
+                    n == Int.MIN_VALUE && d == -1 -> Int.MIN_VALUE
+                    else -> n / d
+                }
+                setReg(rd, res)
             }
             "divu" -> {
                 val d = (getReg(rs2).toLong() and 0xFFFFFFFFL)
                 setReg(rd, if (d != 0L) ((getReg(rs1).toLong() and 0xFFFFFFFFL) / d).toInt() else -1)
             }
             "rem" -> {
+                val n = getReg(rs1)
                 val d = getReg(rs2)
-                setReg(rd, if (d != 0) getReg(rs1) % d else getReg(rs1))
+                val res = when {
+                    d == 0 -> n
+                    n == Int.MIN_VALUE && d == -1 -> 0
+                    else -> n % d
+                }
+                setReg(rd, res)
             }
             "remu" -> {
                 val d = (getReg(rs2).toLong() and 0xFFFFFFFFL)
@@ -326,7 +338,10 @@ class RiscvSimulator {
     }
 
     private fun handleEcall() {
-        val syscallNum = registers[17].value // a7
+        var syscallNum = registers[17].value // a7
+        if (syscallNum == 0) {
+            syscallNum = registers[10].value // fallback to a0 if a7 is 0 (RARS/MARS legacy support)
+        }
         when (syscallNum) {
             1 -> { // Print Int (a0)
                 consoleLog.append(registers[10].value.toString())
@@ -352,12 +367,20 @@ class RiscvSimulator {
                 registers[10].value = heapPointer
                 heapPointer += bytes
             }
-            10, 93 -> { // Exit
+            10, 93 -> { // Exit / Exit0
                 status = ProgramStatus.HALTED
                 consoleLog.append("\n[Program finished with exit code 0]\n")
             }
+            57 -> { // Exit2 (a0 = exit code)
+                val code = registers[10].value
+                status = ProgramStatus.HALTED
+                consoleLog.append("\n[Program finished with exit code $code]\n")
+            }
             11 -> { // Print Char
-                consoleLog.append(registers[10].value.toChar())
+                consoleLog.append((registers[10].value and 0xFF).toChar())
+            }
+            12 -> { // Read Char (returns char in a0)
+                status = ProgramStatus.WAITING_INPUT_INT
             }
             34 -> { // Print Hex
                 consoleLog.append(String.format("0x%08X", registers[10].value))
@@ -365,8 +388,15 @@ class RiscvSimulator {
             35 -> { // Print Binary
                 consoleLog.append(Integer.toBinaryString(registers[10].value))
             }
+            36 -> { // Print Unsigned Int
+                consoleLog.append((registers[10].value.toLong() and 0xFFFFFFFFL).toString())
+            }
             41 -> { // Rand Int
                 registers[10].value = Random.nextInt()
+            }
+            42 -> { // Rand Int Range (a0 = upper bound)
+                val bound = registers[10].value
+                registers[10].value = if (bound > 0) Random.nextInt(bound) else 0
             }
             30 -> { // Time
                 val ms = System.currentTimeMillis()

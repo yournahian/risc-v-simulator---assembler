@@ -78,6 +78,9 @@ data class Register(
                 val num = s.substring(1).toIntOrNull()
                 if (num != null && num in 0..31) return num
             }
+            val rawNum = s.toIntOrNull()
+            if (rawNum != null && rawNum in 0..31) return rawNum
+
             val index = ABI_NAMES.indexOfFirst { abi ->
                 abi.equals(s, ignoreCase = true) || abi.split("/").contains(s)
             }

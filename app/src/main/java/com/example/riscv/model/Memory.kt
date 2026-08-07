@@ -53,7 +53,7 @@ class Memory {
         while (count < maxLen) {
             val b = readByte(curr)
             if (b == 0.toByte()) break
-            sb.append(b.toInt().toChar())
+            sb.append((b.toInt() and 0xFF).toChar())
             curr++
             count++
         }

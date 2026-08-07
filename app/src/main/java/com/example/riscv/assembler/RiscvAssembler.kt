@@ -40,7 +40,7 @@ class RiscvAssembler {
 
             // Check for labels (e.g., "main:" or "loop: addi x1, x1, 1")
             while (true) {
-                val colonIdx = line.indexOf(':')
+                val colonIdx = findLabelColonIndex(line)
                 if (colonIdx >= 0) {
                     val labelName = line.substring(0, colonIdx).trim()
                     if (labelName.isNotEmpty()) {
@@ -206,7 +206,17 @@ class RiscvAssembler {
         )
     }
 
-    private enum class Segment { TEXT, DATA }
+    private fun findLabelColonIndex(line: String): Int {
+        var inQuotes = false
+        for (i in line.indices) {
+            val ch = line[i]
+            if (ch == '"') inQuotes = !inQuotes
+            if (ch == ':' && !inQuotes) {
+                return i
+            }
+        }
+        return -1
+    }
 
     private fun resolveSymbolOrNumber(target: String, symbols: Map<String, Symbol>): Int {
         val s = target.trim()
@@ -339,7 +349,8 @@ class RiscvAssembler {
                     if (Register.parseRegisterName(tokens[2]) == null) {
                         val rs = tokens[1]
                         val label = tokens[2]
-                        return listOf("la t6, $label", "$op $rs, 0(t6)")
+                        val tmpReg = if (rs.lowercase() == "t6" || rs.lowercase() == "x31") "t5" else "t6"
+                        return listOf("la $tmpReg, $label", "$op $rs, 0($tmpReg)")
                     }
                 }
                 listOf(line)
