@@ -12,7 +12,7 @@ An interactive, RARS-inspired RISC-V simulator and assembler for Android, featur
 ## Download APK
 
 You can download the pre-built Android APK directly from this repository:
-- 📱 [Download app-debug.apk](./app-debug.apk)
+- 📱 [Download RISC-V Sim APK (risc-v-sim.apk)](./risc-v-sim.apk)
 
 ## Prerequisites
 
